@@ -43,7 +43,8 @@ ExecuTorch provides hardware acceleration for a wide variety of hardware. The mo
 For mobile use cases, consider using XNNPACK for Android and Core ML or XNNPACK for iOS as a first step. See [Hardware Backends](backends-overview.md) for more information.
 
 ### Exporting
-Exporting is done using Python APIs. ExecuTorch provides a high degree of customization during the export process, but the typical flow is as follows. This example uses the MobileNet V2 image classification model implementation in torchvision, but the process supports any [export-compliant](https://pytorch.org/docs/stable/export.html) PyTorch model.
+Exporting is done using Python APIs. ExecuTorch provides a high degree of customization during the export process, but the typical flow is as follows. This example uses the MobileNet V2 image classification model implementation in torchvision, but the process supports any [export-compliant](https://pytorch.org/docs/stable/export.html) PyTorch model. For users working with Hugging Face models,
+you can find a list of supported models in the [*huggingface/optimum-executorch*](https://github.com/huggingface/optimum-executorch) repo.
 
 ```python
 import torch
@@ -101,6 +102,8 @@ print(torch.allclose(output[0], eager_reference_output, rtol=1e-3, atol=1e-5))
 
 For complete examples of exporting and running the model, please refer to our [examples GitHub repository](https://github.com/pytorch-labs/executorch-examples/tree/main/mv2/python).
 
+Additionally, if you work with Hugging Face models, the [*huggingface/optimum-executorch*](https://github.com/huggingface/optimum-executorch) library simplifies running these models end-to-end with ExecuTorch, using familiar Hugging Face APIs. Visit the repository for specific examples and supported models.
+
 <hr/>
 
 ## Running on Device
@@ -120,7 +123,7 @@ To add the library to your app, add the following dependency to gradle build rul
 ```
 # app/build.gradle.kts
 dependencies {
-  implementation("org.pytorch:executorch-android:0.5.1")
+  implementation("org.pytorch:executorch-android:0.6.0")
 }
 
 # See latest available versions in https://mvnrepository.com/artifact/org.pytorch/executorch-android

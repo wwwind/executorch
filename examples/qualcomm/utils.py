@@ -129,6 +129,7 @@ class SimpleADB:
             f"{self.qnn_sdk}/lib/aarch64-android/libQnnSystem.so",
             f"{self.build_path}/{self.runner}",
             f"{self.build_path}/backends/qualcomm/libqnn_executorch_backend.so",
+            f"{self.qnn_sdk}/lib/aarch64-android/libQnnModelDlc.so",
         ]
         input_list_file, input_files = generate_inputs(
             self.working_dir, self.input_list_filename, inputs, input_list
@@ -288,12 +289,13 @@ def build_executorch_binary(
     skip_node_id_set=None,
     skip_node_op_set=None,
     quant_dtype: Optional[QuantDtype] = None,
-    custom_quantizer=None,
+    custom_quantizer: Optional[QnnQuantizer] = None,
     shared_buffer=False,
     metadata=None,
     dump_intermediate_outputs=False,
     passes_job=None,
     qat_training_data=None,
+    online_prepare=False,
 ):
     """
     A function to generate an ExecuTorch binary for Qualcomm platforms.
@@ -311,7 +313,9 @@ def build_executorch_binary(
         shared_buffer (bool, optional): Applies zero-copy mechanism to optimize runtime memory allocation.
         metadata (dict, optional): An optional dictionary that maps each method name to a constant value in eager mode.
         dump_intermediate_outputs (bool, optional): Enables dumping model intermediate outputs.
-        custom_pass_config (frozenset, optional): Set of custom passes for model processing.
+        passes_job (OrderedDict, optional): Custom passes job in capture_program, users can enable/disable specific passes or modify their attributes.
+        qat_training_data (List[torch.Tensor], optional): A dataset for quantization aware training(QAT). Typically is a pair of tensors, such as [features, ground truth].
+        online_prepare (bool, optional): Compose QNN graph on device if set to True.
 
     Returns:
         None: The function writes the output to a specified .pte file.
@@ -322,11 +326,12 @@ def build_executorch_binary(
     compile_spec = generate_qnn_executorch_compiler_spec(
         soc_model=getattr(QcomChipset, soc_model),
         backend_options=backend_options,
+        online_prepare=online_prepare,
         shared_buffer=shared_buffer,
         dump_intermediate_outputs=dump_intermediate_outputs,
     )
-    if quant_dtype is not None:
-        captured_model = torch.export.export(model, inputs, strict=True).module()
+    if quant_dtype is not None or custom_quantizer is not None:
+        captured_model = torch.export.export(model, inputs, strict=False).module()
         if qat_training_data:
             quantizer = custom_quantizer or make_quantizer(
                 quant_dtype=quant_dtype, is_qat=True
@@ -498,6 +503,13 @@ def setup_common_args_and_variables():
         help="hostname where android device is connected.",
         default=None,
         type=str,
+    )
+
+    parser.add_argument(
+        "--online_prepare",
+        help="If specified, compose QNN graph on device.",
+        action="store_true",
+        default=False,
     )
 
     parser.add_argument(
