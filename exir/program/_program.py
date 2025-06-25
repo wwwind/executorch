@@ -1725,6 +1725,62 @@ class ExecutorchProgramManager:
         else:
             print_program(self._emitter_output.program, out=out)
 
+    def dump_delegate_data(
+        self,
+        path: str,
+        extension: str,
+        delegate_id: Optional[str] = None,
+    ) -> None:
+        """
+        Dumps the delegate data for the specified delegate_id to <path><extension>.
+        If no delegate_id is specified and only one exists, dumps that one.
+        """
+        delegate_segments = getattr(self._emitter_output, "delegate_segments", {})
+        if not delegate_segments:
+            raise RuntimeError(
+                "No delegate segments available in this Executorch program."
+            )
+
+        if delegate_id is None:
+            all_ids = [
+                did for segs in delegate_segments.values() for did in segs.keys()
+            ]
+            unique_ids = set(all_ids)
+            if not unique_ids:
+                raise RuntimeError("No delegate data found.")
+            if len(unique_ids) > 1:
+                raise ValueError(
+                    f"Multiple delegate IDs found: {unique_ids}. "
+                    "Please specify delegate_id explicitly."
+                )
+            delegate_id = next(iter(unique_ids))
+
+        if not extension.startswith("."):
+            extension = "." + extension
+
+        found = False
+        for method, segments in delegate_segments.items():
+            if delegate_id in segments:
+                data = segments[delegate_id]
+                filename = f"{path}{extension}"
+                if len(delegate_segments) > 1:
+                    filename = f"{path}_{method}{extension}"
+
+                with open(filename, "wb") as f:
+                    if hasattr(data, "data"):
+                        f.write(data.data)
+                    elif isinstance(data, (bytes, bytearray)):
+                        f.write(data)
+                    else:
+                        raise RuntimeError(f"Unknown delegate data type: {type(data)}")
+                found = True
+                break
+
+        if not found:
+            raise ValueError(
+                f"Delegate data for id {delegate_id!r} not found in any method."
+            )
+
     @property
     def debug_handle_map(self) -> Dict[int, Union[int, List[int]]]:
         return self._emitter_output.debug_handle_map
