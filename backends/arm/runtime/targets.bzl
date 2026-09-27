@@ -49,6 +49,7 @@ def define_common_targets():
             "fbsource//third-party/vulkan-headers-1.4.343/v1.4.343/src:volk_arm_src",
         ],
         exported_headers = [
+            "VGFExecutionStats.h",  # VGF_PHASE0_V2: disabled-build macros
             "VGFNeuralStatistics.h",
             "VGFSetup.h",
             "VGFVulkanFeatures.h",
